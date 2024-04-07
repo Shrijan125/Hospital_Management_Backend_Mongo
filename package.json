@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "A java script backend for hospital management application",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "prettier --write \"src/**/*.js\"",
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
   },
   "author": "Shrijan Shreshth",
   "license": "ISC",
