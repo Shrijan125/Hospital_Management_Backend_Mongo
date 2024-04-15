@@ -4,7 +4,9 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-
+import { Dept } from "../models/departments.model.js";
+import { Doctor } from "../models/doctors.model.js";
+import { Appointment } from "../models/appointments.model.js";
 const generateAccessTokenAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -186,7 +188,6 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const updateEmail = asyncHandler(async (req, res) => {
   const { email } = req.body;
-
   if (!email) {
     throw new ApiError(400, "Email is required");
   }
@@ -202,8 +203,17 @@ const updateEmail = asyncHandler(async (req, res) => {
       new: true,
     }
   ).select(" -password ");
-
-  return res.status(200).json(new ApiResponse(200, user, "Email Updated"));
+  const { accessToken, refreshToken } =
+    await generateAccessTokenAndRefreshTokens(user._id);
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { accessToken: accessToken, refreshToken: refreshToken },
+        "Email Updated"
+      )
+    );
 });
 
 const updateUserProfile = asyncHandler(async (req, res) => {
@@ -236,13 +246,104 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Profile photo updated succesfully"));
 });
 
+const getCurrentUserTest = function (req, res) {
+  return res.status(200).json({ msg: "Success" });
+};
+
+const getDepartment = asyncHandler(async (req, res) => {
+  const getAllDepts = await Dept.find({}, "name");
+  if (!getAllDepts || getAllDepts.length === 0) {
+    throw new ApiError(404, "No Department Found");
+  }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, getAllDepts, "Fetched Department names successfully")
+    );
+});
+const getDoctors= asyncHandler(async (req, res) => {
+  const getAllDoctors = await Doctor.find({},"name availability department consultationCharge");
+  if (!getAllDoctors || getAllDoctors.length === 0) {
+    throw new ApiError(404, "No Doctor Found");
+  }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, getAllDoctors, "Fetched Doctors names successfully")
+    );
+});
+
+const getAvailableSlot= asyncHandler(async (req, res) => {
+  const {doctor_id}=req.query;
+  const getslot = await Doctor.find({_id:doctor_id},"availability");
+  if (!getslot || getslot.length === 0) {
+    throw new ApiError(404, "No Time Slot Found");
+  }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, getslot, "Fetched TimeSlots  successfully")
+    );
+});
+
+const bookAppointment=asyncHandler(async (req, res) => {
+  const {doctor_id,booked_time,dept_id,index,user_id}=req.body;
+  if ([doctor_id,  dept_id ,user_id].some((field) => field?.trim() === "")) {
+    throw new ApiError(400, "All fields are required");
+  }
+
+  if(!index)
+  {
+    throw new ApiError(400, "All fields are required");
+  }
+
+  if(booked_time=="")
+  {
+    throw new ApiError(409,"This time slot has been booked");
+  }
+
+
+  const appointment = await Appointment.create({
+    doctorID:doctor_id,
+    timeSlot:booked_time,
+    deptID:dept_id,
+    userId:user_id
+  });
+
+ const updateDoctor= await Doctor.findByIdAndUpdate(doctor_id,{
+    $set: {
+      [`availability.${index}.booked`]: true
+    }
+  },{
+    new:true
+  });
+  if(!updateDoctor)
+  {
+    throw new ApiError(500, "Something went wrong while booking the appointment");
+  }
+
+  const createdAppointment=Appointment.findById(appointment._id);
+  
+  if (!createdAppointment) {
+    throw new ApiError(500, "Something went wrong while booking the appointment");
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, appointment._id, "Appointment Booked successfully"));
+})
+
 export {
   SignUpUser,
   loginUser,
+  getDoctors,
   logoutUser,
   refreshAccessToken,
   changeCurrentPassword,
   getCurrentUser,
+  getDepartment,
   updateEmail,
   updateUserProfile,
+  getCurrentUserTest,
+  getAvailableSlot,
+  bookAppointment
 };

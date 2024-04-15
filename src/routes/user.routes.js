@@ -10,6 +10,11 @@ import {
   getCurrentUser,
   updateEmail,
   updateUserProfile,
+  getCurrentUserTest,
+  getDepartment,
+  getDoctors,
+  getAvailableSlot,
+  bookAppointment
 } from "../controllers/user.controller.js";
 const router = Router();
 
@@ -30,5 +35,15 @@ router.route("/update-email").put(verifyJwt, updateEmail);
 router
   .route("/updateUserProfile")
   .put(upload.single("profile"), verifyJwt, updateUserProfile);
+
+router.route("/getTest").get(getCurrentUserTest);
+
+router.route("/getDepartment").get(verifyJwt,getDepartment);
+
+router.route("/getDoctors").get(verifyJwt,getDoctors);
+
+router.route("/getSlots").get(verifyJwt,getAvailableSlot);
+
+router.route("/book-appointment").post(verifyJwt,bookAppointment);
 
 export default router;
