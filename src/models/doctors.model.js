@@ -52,8 +52,8 @@ const doctorSchema = new mongoose.Schema(
       required: true,
     },
     availability: {
-      type:[timeSlotSchema],
-      required:true
+      type: [timeSlotSchema],
+      required: true,
     },
   },
   {

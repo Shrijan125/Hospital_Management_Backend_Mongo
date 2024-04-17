@@ -261,8 +261,11 @@ const getDepartment = asyncHandler(async (req, res) => {
       new ApiResponse(200, getAllDepts, "Fetched Department names successfully")
     );
 });
-const getDoctors= asyncHandler(async (req, res) => {
-  const getAllDoctors = await Doctor.find({},"name availability department consultationCharge");
+const getDoctors = asyncHandler(async (req, res) => {
+  const getAllDoctors = await Doctor.find(
+    {},
+    "name availability department consultationCharge shortDescription profilePhoto"
+  );
   if (!getAllDoctors || getAllDoctors.length === 0) {
     throw new ApiError(404, "No Doctor Found");
   }
@@ -273,64 +276,145 @@ const getDoctors= asyncHandler(async (req, res) => {
     );
 });
 
-const getAvailableSlot= asyncHandler(async (req, res) => {
-  const {doctor_id}=req.query;
-  const getslot = await Doctor.find({_id:doctor_id},"availability");
+const getAvailableSlot = asyncHandler(async (req, res) => {
+  const { doctor_id } = req.query;
+  const getslot = await Doctor.find({ _id: doctor_id }, "availability");
   if (!getslot || getslot.length === 0) {
     throw new ApiError(404, "No Time Slot Found");
   }
   return res
     .status(200)
-    .json(
-      new ApiResponse(200, getslot, "Fetched TimeSlots  successfully")
-    );
+    .json(new ApiResponse(200, getslot, "Fetched TimeSlots  successfully"));
 });
 
-const bookAppointment=asyncHandler(async (req, res) => {
-  const {doctor_id,booked_time,dept_id,index,user_id}=req.body;
-  if ([doctor_id,  dept_id ,user_id].some((field) => field?.trim() === "")) {
+const bookAppointment = asyncHandler(async (req, res) => {
+  const { doctor_id, booked_time, dept_id, index, user_id } = req.body;
+  if ([doctor_id, dept_id, user_id].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
 
-  if(!index)
-  {
+  if (!index) {
     throw new ApiError(400, "All fields are required");
   }
 
-  if(booked_time=="")
-  {
-    throw new ApiError(409,"This time slot has been booked");
+  if (booked_time == "") {
+    throw new ApiError(409, "This time slot has been booked");
   }
-
 
   const appointment = await Appointment.create({
-    doctorID:doctor_id,
-    timeSlot:booked_time,
-    deptID:dept_id,
-    userId:user_id
+    doctorID: doctor_id,
+    timeSlot: booked_time,
+    deptID: dept_id,
+    userID: user_id,
   });
 
- const updateDoctor= await Doctor.findByIdAndUpdate(doctor_id,{
-    $set: {
-      [`availability.${index}.booked`]: true
+  const updateDoctor = await Doctor.findByIdAndUpdate(
+    doctor_id,
+    {
+      $set: {
+        [`availability.${index}.booked`]: true,
+      },
+    },
+    {
+      new: true,
     }
-  },{
-    new:true
-  });
-  if(!updateDoctor)
-  {
-    throw new ApiError(500, "Something went wrong while booking the appointment");
+  );
+  if (!updateDoctor) {
+    throw new ApiError(
+      500,
+      "Something went wrong while booking the appointment"
+    );
   }
 
-  const createdAppointment=Appointment.findById(appointment._id);
-  
+  const createdAppointment = Appointment.findById(appointment._id);
+
   if (!createdAppointment) {
-    throw new ApiError(500, "Something went wrong while booking the appointment");
+    throw new ApiError(
+      500,
+      "Something went wrong while booking the appointment"
+    );
   }
   return res
     .status(200)
-    .json(new ApiResponse(200, appointment._id, "Appointment Booked successfully"));
-})
+    .json(
+      new ApiResponse(200, appointment._id, "Appointment Booked successfully")
+    );
+});
+
+// const getAppointments = asyncHandler(async (req, res) => {
+//   const { user_id } = req.query;
+//   const getAppointment = await Appointment.find({ userID: user_id });
+//   if (!getAppointment) {
+//     throw new ApiError(404, "No Upcoming appointments");
+//   }
+//  console.log(getAppointment);
+// const getDoctor = await Doctor.find({_id : getAppointment.doctorID });
+// console.log(getDoctor);
+//   return res
+//     .status(200)
+//     .json(
+//       new ApiResponse(200, getAppointment, "Fetched Appointments successfully")
+//     );
+// });
+
+const getAppointments = asyncHandler(async (req, res) => {
+  const { user_id } = req.query;
+
+  // Find appointments for the given user ID
+  const appointments = await Appointment.find({ userID: user_id });
+
+  if (!appointments || appointments.length === 0) {
+    throw new ApiError(404, "No upcoming appointments");
+  }
+
+  // Extract doctorIDs from the appointments
+  const doctorIDs = appointments.map((appointment) => appointment.doctorID);
+
+  // Find doctors corresponding to the extracted doctorIDs
+  const doctors = await Doctor.find({ _id: { $in: doctorIDs } });
+
+  if (!doctors || doctors.length === 0) {
+    throw new ApiError(404, "No doctors found for appointments");
+  }
+
+  // Map doctor information to the corresponding appointments
+  const appointmentsWithDoctorInfo = appointments.map((appointment) => {
+    const doctor = doctors.find((doctor) =>
+      doctor._id.equals(appointment.doctorID)
+    );
+    return {
+      ...appointment.toObject(),
+      doctorName: doctor ? doctor.name : "Unknown",
+      doctorProfile: doctor ? doctor.profile : "Profile not available",
+      doctorProfilePhoto: doctor ? doctor.profilePhoto : null, // Include profilePhoto
+    };
+  });
+
+  // Send response with the enriched appointment data
+  return res.status(200).json({
+    status: 200,
+    data: appointmentsWithDoctorInfo,
+    message: "Fetched appointments successfully with doctor information",
+  });
+});
+
+const getDoctorAndDeptbyId = asyncHandler(async (req, res) => {
+  const { doctor_id, deptID } = req.query;
+  const getDoctor = await Doctor.find(
+    { _id: doctor_id },
+    "name department profilePhoto"
+  );
+  if (!getDoctor) {
+    throw new ApiError(404, "No Doctor Found");
+  }
+  const getDepts = await Dept.find({ _id: deptID }, "name");
+  const responseData = [{ getDoctor, getDepts }];
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, responseData, "Fetched Doctors names successfully")
+    );
+});
 
 export {
   SignUpUser,
@@ -345,5 +429,7 @@ export {
   updateUserProfile,
   getCurrentUserTest,
   getAvailableSlot,
-  bookAppointment
+  bookAppointment,
+  getAppointments,
+  getDoctorAndDeptbyId,
 };

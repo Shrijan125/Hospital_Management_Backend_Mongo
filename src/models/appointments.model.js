@@ -6,16 +6,16 @@ const appointmentSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Doctor",
     },
-    userID:{
-      type:mongoose.Schema.Types.ObjectId,
-      ref:"User",
+    userID: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     timeSlot: {
-      type:String,
-      required:true
+      type: String,
+      required: true,
     },
-    deptID:{type: mongoose.Schema.Types.ObjectId,
-    ref:"Dept"},
+    deptID: { type: mongoose.Schema.Types.ObjectId, ref: "Dept" },
 
     paymentStatus: {
       type: String,

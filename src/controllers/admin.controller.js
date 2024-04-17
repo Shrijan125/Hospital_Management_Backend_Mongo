@@ -96,8 +96,7 @@ const addDoctor = asyncHandler(async (req, res) => {
     throw new ApiError(404, "All fields are required");
   }
 
-  if(!availability || availability.length ==0)
-  {
+  if (!availability || availability.length == 0) {
     throw new ApiError(404, "All fields are required");
   }
 
@@ -122,7 +121,7 @@ const addDoctor = asyncHandler(async (req, res) => {
     department,
     shortDescription,
     LongDescription,
-    availability
+    availability,
   });
 
   const createdDoctorId = await Doctor.findById(doctor._id);
@@ -256,7 +255,6 @@ const getMedicine = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, getAllDepts, "Fetched Categories successfully"));
 });
 
-
 export {
   SignUpAdmin,
   loginAdmin,
@@ -266,5 +264,4 @@ export {
   addMedicineCategory,
   addMedicine,
   getMedicine,
-
 };
